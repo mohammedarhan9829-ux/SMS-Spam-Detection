@@ -44,17 +44,32 @@ def predict_sms(payload: SMSRequest):
 
 @app.post("/webhook/sms")
 async def sms_webhook(request: Request):
-    form_data = await request.form()
+    raw_body_bytes = await request.body()
+    raw_body_str = raw_body_bytes.decode('utf-8', errors='ignore')
+
+    form_data = {}
+    try:
+        form_data = await request.form()
+    except Exception:
+        pass
+
     json_data = {}
     try:
         json_data = await request.json()
     except Exception:
         pass
 
-    body_text = form_data.get("Body") or form_data.get("text") or form_data.get("message") or json_data.get("text") or json_data.get("message")
+    # Universal extractor for text from any parameter key or raw body
+    body_text = (
+        form_data.get("text") or form_data.get("body") or form_data.get("message") or
+        form_data.get("sms") or form_data.get("sms_body") or form_data.get("notification_text") or
+        form_data.get("Body") or form_data.get("Text") or
+        json_data.get("text") or json_data.get("body") or json_data.get("message") or
+        raw_body_str
+    )
 
-    if not body_text:
-        return Response(status_code=204) # No Content for empty/ham
+    if not body_text or not body_text.strip():
+        return Response(status_code=204)
 
     result = predictor.predict_single(body_text)
 
