@@ -59,7 +59,6 @@ async def sms_webhook(request: Request):
     except Exception:
         pass
 
-    # Universal extractor for text from any parameter key or raw body
     body_text = (
         form_data.get("text") or form_data.get("body") or form_data.get("message") or
         form_data.get("sms") or form_data.get("sms_body") or form_data.get("notification_text") or
@@ -69,23 +68,17 @@ async def sms_webhook(request: Request):
     )
 
     if not body_text or not body_text.strip():
-        return Response(status_code=204)
+        return Response(content="✅ LEGITIMATE SMS | Text: Empty", media_type="text/plain", status_code=200)
 
     result = predictor.predict_single(body_text)
 
-    # Return HTTP 200 ONLY for Spam, HTTP 204 for Ham
+    # Return plain text formatted notification string for direct display
     if result['is_spam']:
-        res_payload = {
-            "status": "spam_detected",
-            "is_spam": True,
-            "verdict": "Spam",
-            "probability": result['probability'],
-            "risk_level": result['risk_level'],
-            "incoming_text": body_text[:60]
-        }
-        return JSONResponse(content=res_payload, status_code=200)
+        plain_response = f"🚨 SPAM DETECTED ({result['probability']}%) | Message: {body_text[:50]}"
     else:
-        return Response(status_code=204) # 204 No Content for legitimate messages
+        plain_response = f"✅ LEGITIMATE SMS | Message: {body_text[:50]}"
+
+    return Response(content=plain_response, media_type="text/plain", status_code=200)
 
 # Complete HTML/JS Interactive Web Dashboard on Render
 @app.get("/", response_class=HTMLResponse)
