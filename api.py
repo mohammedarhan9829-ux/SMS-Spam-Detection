@@ -68,17 +68,15 @@ async def sms_webhook(request: Request):
     )
 
     if not body_text or not body_text.strip():
-        return Response(content="✅ LEGITIMATE SMS | Text: Empty", media_type="text/plain", status_code=200)
+        return Response(content="HAM", media_type="text/plain", status_code=200)
 
     result = predictor.predict_single(body_text)
 
-    # Return plain text formatted notification string for direct display
+    # Return pure string "SPAM" or "HAM" for instant MacroDroid matching
     if result['is_spam']:
-        plain_response = f"🚨 SPAM DETECTED ({result['probability']}%) | Message: {body_text[:50]}"
+        return Response(content="SPAM", media_type="text/plain", status_code=200)
     else:
-        plain_response = f"✅ LEGITIMATE SMS | Message: {body_text[:50]}"
-
-    return Response(content=plain_response, media_type="text/plain", status_code=200)
+        return Response(content="HAM", media_type="text/plain", status_code=200)
 
 # Complete HTML/JS Interactive Web Dashboard on Render
 @app.get("/", response_class=HTMLResponse)
