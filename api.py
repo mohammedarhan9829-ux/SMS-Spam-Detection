@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 import pandas as pd
 import json
+import re
 import io
 import os
 import uvicorn
@@ -59,6 +60,7 @@ async def sms_webhook(request: Request):
     except Exception:
         pass
 
+    # Universal extractor
     body_text = (
         form_data.get("text") or form_data.get("body") or form_data.get("message") or
         form_data.get("sms") or form_data.get("sms_body") or form_data.get("notification_text") or
@@ -67,7 +69,13 @@ async def sms_webhook(request: Request):
         raw_body_str
     )
 
-    if not body_text or not body_text.strip():
+    # Clean up prefixes if raw parameter string was passed
+    if body_text:
+        body_text = re.sub(r'^text=\s*', '', body_text, flags=re.IGNORECASE)
+        body_text = re.sub(r'^\s*\{\s*text:\s*', '', body_text, flags=re.IGNORECASE)
+        body_text = body_text.strip(' {}\n\r\t"')
+
+    if not body_text or body_text == '[notification_text]' or body_text == '[sms_body]':
         return Response(content="HAM", media_type="text/plain", status_code=200)
 
     result = predictor.predict_single(body_text)
