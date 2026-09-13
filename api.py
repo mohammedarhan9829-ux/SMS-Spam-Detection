@@ -54,20 +54,20 @@ async def sms_webhook(request: Request):
     body_text = form_data.get("Body") or form_data.get("text") or form_data.get("message") or json_data.get("text") or json_data.get("message")
 
     if not body_text:
-        return {"status": "ignored", "reason": "No message body found"}
+        return JSONResponse(content={"status": "ignored", "is_spam": False, "verdict": "Ham"}, status_code=200)
 
     result = predictor.predict_single(body_text)
 
-    return {
+    # Return clean JSON string for MacroDroid matching
+    res_payload = {
         "status": "processed",
-        "incoming_text": body_text,
         "is_spam": result['is_spam'],
+        "verdict": result['label'],
         "probability": result['probability'],
         "risk_level": result['risk_level'],
-        "verdict": result['label'],
-        "notification_title": "🚨 SPAM ALERT" if result['is_spam'] else "✅ LEGITIMATE SMS",
-        "notification_message": f"[{result['label']}] Risk: {result['probability']}% | Message: {body_text[:50]}"
+        "incoming_text": body_text[:60]
     }
+    return JSONResponse(content=res_payload)
 
 # Complete HTML/JS Interactive Web Dashboard on Render
 @app.get("/", response_class=HTMLResponse)
