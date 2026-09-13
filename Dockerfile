@@ -25,5 +25,5 @@ RUN python -c "from src.trainer import train_and_evaluate_models; train_and_eval
 
 EXPOSE 8000 8501
 
-# Command to start FastAPI REST API
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start command
+CMD ["python", "api.py"]
