@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel
 from typing import Optional, List
 import pandas as pd
@@ -54,20 +54,23 @@ async def sms_webhook(request: Request):
     body_text = form_data.get("Body") or form_data.get("text") or form_data.get("message") or json_data.get("text") or json_data.get("message")
 
     if not body_text:
-        return JSONResponse(content={"status": "ignored", "is_spam": False, "verdict": "Ham"}, status_code=200)
+        return Response(status_code=204) # No Content for empty/ham
 
     result = predictor.predict_single(body_text)
 
-    # Return clean JSON string for MacroDroid matching
-    res_payload = {
-        "status": "processed",
-        "is_spam": result['is_spam'],
-        "verdict": result['label'],
-        "probability": result['probability'],
-        "risk_level": result['risk_level'],
-        "incoming_text": body_text[:60]
-    }
-    return JSONResponse(content=res_payload)
+    # Return HTTP 200 ONLY for Spam, HTTP 204 for Ham
+    if result['is_spam']:
+        res_payload = {
+            "status": "spam_detected",
+            "is_spam": True,
+            "verdict": "Spam",
+            "probability": result['probability'],
+            "risk_level": result['risk_level'],
+            "incoming_text": body_text[:60]
+        }
+        return JSONResponse(content=res_payload, status_code=200)
+    else:
+        return Response(status_code=204) # 204 No Content for legitimate messages
 
 # Complete HTML/JS Interactive Web Dashboard on Render
 @app.get("/", response_class=HTMLResponse)
